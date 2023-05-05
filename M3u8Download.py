@@ -64,6 +64,7 @@ class M3u8Download:
                 pool.submit(self.download_ts, ts_url, os.path.join(self._file_path, str(k)), self._num_retries)
         if self._success_sum == self._ts_sum:
             self.output_mp4()
+            os.system(f'echo file \'{self._name}.mp4\' >> file.txt')
             self.delete_file()
             print(f"Download successfully --> {self._name}")
 
@@ -200,7 +201,7 @@ class M3u8Download:
         """
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
-        cmd = 'ffmpeg -allowed_extensions ALL -i "%s.m3u8" -acodec copy -vcodec copy -f mp4 "E:\\xvideos\\%s.mp4"' % (self._file_path, self._name)
+        cmd = 'ffmpeg -allowed_extensions ALL -i "%s.m3u8" -acodec copy -vcodec copy -f mp4 "%s.mp4"' % (self._file_path, self._name)
         # os.system(cmd)
         print(cmd)
         self.shell_run_cmd_block(cmd)
