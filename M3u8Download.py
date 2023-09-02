@@ -11,6 +11,7 @@ import requests
 import urllib3
 import subprocess
 import multiprocessing
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -230,7 +231,7 @@ def proc(url_list, name_list):
         else:
             with requests.get(u, stream=True, timeout=(5, 60), verify=False, headers=self._headers) as res:
                 if res.status_code == 200:
-                    filename = os.path.basename(u.split('?')[0])
+                    filename = f'{int(time.time())}_' + os.path.basename(u.split('?')[0])
                     with open(filename, "wb") as ts:
                         for chunk in res.iter_content(chunk_size=1024):
                             if chunk:
@@ -245,7 +246,7 @@ if __name__ == "__main__":
         url_list = input("输入url，若同时输入多个url时要用|分开：").split('|')
         name_list = []
         for url in url_list:
-            name = os.path.basename(url.split('?')[0])
+            name = f'{int(time.time())}_' + os.path.basename(url.split('?')[0])
             file,ext = os.path.splitext(name)
             name_list.append(file)
         # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
