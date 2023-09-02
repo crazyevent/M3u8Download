@@ -63,7 +63,9 @@ class M3u8Download:
             for k, ts_url in enumerate(self._ts_url_list):
                 pool.submit(self.download_ts, ts_url, os.path.join(self._file_path, str(k)), self._num_retries)
         if self._success_sum == self._ts_sum:
-            self.output_mp4()
+            if self.output_mp4() != 0:
+                print(f"concat failed --> {self._name}")
+                return
             os.system(f'echo file \'{self._name}.mp4\' >> file.txt')
             self.delete_file()
             print(f"Download successfully --> {self._name}")
@@ -181,7 +183,7 @@ class M3u8Download:
             print(e)
             if os.path.exists(os.path.join(self._file_path, 'key')):
                 os.remove(os.path.join(self._file_path, 'key'))
-            print("加密视频,无法加载key,揭秘失败")
+            print("加密视频,无法加载key,解密失败")
             if num_retries > 0:
                 self.download_key(key_line, num_retries - 1)
                 
@@ -196,6 +198,7 @@ class M3u8Download:
                          )
         p.wait()
         print('cmd ret=%d' % p.returncode)
+        return p.returncode
 
     def output_mp4(self):
         """
@@ -204,7 +207,7 @@ class M3u8Download:
         cmd = 'ffmpeg -allowed_extensions ALL -i "%s.m3u8" -acodec copy -vcodec copy -f mp4 "%s.mp4"' % (self._file_path, self._name)
         # os.system(cmd)
         print(cmd)
-        self.shell_run_cmd_block(cmd)
+        return self.shell_run_cmd_block(cmd)
 
     def delete_file(self):
         file = os.listdir(self._file_path)
@@ -217,12 +220,24 @@ class M3u8Download:
 def proc(url_list, name_list):
     sta = len(url_list) == len(name_list)
     for i, u in enumerate(url_list):
-        M3u8Download(u,
-                     name_list[i] if sta else f"{name_list[0]}{i + 1:02}",
-                     max_workers=64,
-                     num_retries=10,
-                     # base64_key='5N12sDHDVcx1Hqnagn4NJg=='
-                     )
+        if '.m3u8' in u:
+            M3u8Download(u,
+                         name_list[i] if sta else f"{name_list[0]}{i + 1:02}",
+                         max_workers=64,
+                         num_retries=10,
+                         # base64_key='5N12sDHDVcx1Hqnagn4NJg=='
+                         )
+        else:
+            with requests.get(u, stream=True, timeout=(5, 60), verify=False, headers=self._headers) as res:
+                if res.status_code == 200:
+                    filename = os.path.basename(u.split('?')[0])
+                    with open(filename, "wb") as ts:
+                        for chunk in res.iter_content(chunk_size=1024):
+                            if chunk:
+                                ts.write(chunk)
+                else:
+                    print(f'url: {u} 下载失败')
+                
     exit()
 
 if __name__ == "__main__":
@@ -230,7 +245,7 @@ if __name__ == "__main__":
         url_list = input("输入url，若同时输入多个url时要用|分开：").split('|')
         name_list = []
         for url in url_list:
-            name = os.path.basename(url)
+            name = os.path.basename(url.split('?')[0])
             file,ext = os.path.splitext(name)
             name_list.append(file)
         # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
